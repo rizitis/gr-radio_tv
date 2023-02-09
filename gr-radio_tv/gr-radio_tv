@@ -1,0 +1,114 @@
+#!/bin/bash
+#
+# bash_radio_gr - ακούστε online ραδιόφωνο από το τερματικό
+# Copyright (c)2018 Vasilis Niakas and Contributors
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation version 3 of the License.
+#
+# Please read the file LICENSE and README for more information.
+#******************************************************************************
+# =====script updated 2/2023 to support webtv and renamed gr-radio_tv ======== *
+# gr-radio_tv                                                                  *
+# Copyright (c)2023 Anagnostakis Ioannis                                      *
+#                                                                             *
+# This program is free software; you can redistribute it and/or modify        *
+# it under the terms of the GNU General Public License as published by        *
+# the Free Software Foundation version 3 of the License.                      *
+#                                                                             *
+# Please read the file LICENSE and README for more information.               *
+#******************************************************************************
+#
+while true
+do
+terms=0
+trap ' [ $terms = 1 ] || { terms=1; kill -TERM -$$; };  exit' EXIT INT HUP TERM QUIT 
+
+if [ "$#" -eq "0" ]		    #στην περίπτωση που δε δωθεί όρισμα παίρνει το προκαθορισμένο αρχείο
+	then
+	stations="favorite-playlist.txt"
+	else
+	stations=$1
+fi
+
+player=$(command -v cvlc 2>/dev/null || echo "1")
+
+if [[ $player = 1 ]];
+	then
+	echo "Δε βρέθηκε συμβατός media player"
+	exit
+fi
+
+info() {
+tput civis      -- invisible  # Εξαφάνιση cursor
+echo -ne "| Η ώρα είναι "$(date +"%T")"\n| Βλέπετε "$stathmos_name"\n| Πατήστε Q/q για έξοδο ή R/r για επιστροφή στη λίστα σταθμών"
+}
+echo "---------------------------------------------------------"
+echo "gr-radio_tv"
+echo "---------------------------------------------------------"
+echo "https://github.com/rizitis/gr-radio_tv"
+
+while true 
+do
+echo "---------------------------------------------------------"
+num=0 
+
+while IFS='' read -r line || [[ -n "$line" ]]; do
+    num=$(( $num + 1 ))
+    echo "["$num"]" $line | cut -d "," -f1
+done < $stations
+echo "---------------------------------------------------------"
+read -rp "Διαλέξτε Σταθμό (Q/q για έξοδο): " input
+
+if [[ $input = "q" ]] || [[ $input = "Q" ]] 
+   	then
+	echo "Έξοδος..."
+	tput cnorm   -- normal  # Εμφάνιση cursor
+	exit 0
+fi
+
+if [ $input -gt 0 -a $input -le $num ]; #έλεγχος αν το input είναι μέσα στο εύρος της λίστας των σταθμών
+	then
+	stathmos_name=$(cat $stations | head -n$(( $input )) | tail -n1 | cut -d "," -f1)
+	stathmos_url=$(cat $stations | head -n$(( $input )) | tail -n1 | cut -d "," -f2)
+	break
+	else
+	echo "Αριθμός σταθμού εκτός λίστας"
+	sleep 2
+	clear
+fi
+done
+
+$player $stathmos_url &> /dev/null &
+while true
+
+do 
+	   clear 
+	   info
+	   sleep 0
+	   read -n1 -t1 input          # Για μικρότερη αναμονή της read
+	   if [[ $input = "q" ]] || [[ $input = "Q" ]] 
+   		then
+		clear
+		echo "Έξοδος..."
+		tput cnorm   -- normal  # Εμφάνιση cursor
+           	exit 0
+           fi
+
+	   if [[ $input = "r" ]] || [[ $input = "R" ]]
+		then
+		killall -9 $player &> /dev/null
+		clear
+		echo "Επιστροφή στη λίστα ραδιοτηλεοπτικών σταθμών"
+		tput cnorm   -- normal  # Εμφάνιση cursor
+		sleep 2
+		clear
+		break
+
+
+		
+	   fi
+done
+
+done
