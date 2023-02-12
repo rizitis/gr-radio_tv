@@ -32,7 +32,7 @@ if [ "$#" -eq "0" ]		    #στην περίπτωση που δε δωθεί ό�
 	stations=$1
 fi
 
-player=$(command -v cvlc 2>/dev/null || echo "1")
+player=$(command -v totem 2>/dev/null || echo "1")
 
 if [[ $player = 1 ]];
 	then
